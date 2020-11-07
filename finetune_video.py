@@ -256,7 +256,7 @@ def main(args, writer):
                 milestones=milestones, 
                 gamma=args.lr_gamma
             )
-            multiplier = torch.cuda.device_count() if torch.cuda.is_available() else 1
+            multiplier = 8
             lr_scheduler = GradualWarmupScheduler(
                 optimizer, 
                 multiplier=multiplier,
