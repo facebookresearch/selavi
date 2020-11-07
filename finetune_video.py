@@ -292,7 +292,6 @@ def main(args, writer):
             epoch=args.start_epoch, 
             writer=writer,
             ds=args.dataset,
-            dataset_type=args.dataset_type
         )
         _, vid_acc1, vid_acc5 = scores_val
         return vid_acc1, vid_acc5, args.start_epoch
@@ -319,7 +318,6 @@ def main(args, writer):
             epoch=epoch,
             writer=writer,
             ds=args.dataset,
-            dataset_type=args.dataset_type
         )
         _, vid_acc1, vid_acc5 = scores_val
         training_stats.update(scores + scores_val)
@@ -344,7 +342,6 @@ def train(
     epoch, 
     writer=None,
     ds='hmdb51',
-    dataset_type='torchvision'
 ):
     # Put model in train mode
     model.train()
@@ -445,10 +442,7 @@ def evaluate(model, val_loader, epoch=0, writer=None, ds='hmdb51'):
         end = time.perf_counter()
         for batch_idx, batch in enumerate(val_loader):
             
-            if dataset_type == 'torchvision':
-                (video, target, _, video_idx) = batch
-            else:
-                (video, _, target, _, video_idx) = batch
+            (video, target, _, video_idx) = batch
 
             # move to gpu
             video = video.cuda(non_blocking=True)
