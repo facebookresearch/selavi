@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Labelling unlabelled videos from scratch with multi-modal self-supervision</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3"></script>
+    <script src="data/clusters.js"></script>
+    <script src="data/clustervis.js"></script>
+    <link rel="stylesheet" href="data/clustervis.css">
+  </head>
+  <body>
+    <div class="header">
+      <h1>Labelling unlabelled videos from scratch with multi-modal self-supervision</h1>
+      <div class="horizontal">
+        <a href="https://yukimasano.github.io/">Yuki M. Asano*</a>
+        <a href="#">Mandela Patrick*</a>
+        <a href="https://chrirupp.github.io/">Christian Rupprecht</a>
+        <a href="http://www.robots.ox.ac.uk/~vedaldi/">Andrea Vedaldi</a>
+      </div>
+      <span class="contrib">*equal contribution</span>
+
+      <a href='#welcome-title'><img src="data/method.jpg" alt="Method overview"/></a>
+      <div class="horizontal">
+        <a href='#'> Paper [arXiv]</a>
+        <a href='#welcome-title' class="emph"> Cluster Browser (online demo)</a>
+		<a href='#'> Code (soon!) [PyTorch]</a>
+      </div>
+
+    <h2>Abstract</h2>
+    <p>A large part of the current success of deep learning lies in the effectiveness of data -- more precisely: labelled
+        data. Yet, labelling a dataset with human annotation continues to carry high costs, especially for videos. While
+        in the image domain, recent methods have allowed to generate meaningful (pseudo-) labels for unlabelled datasets
+        without supervision, this development is missing for the video domain where learning feature representations is
+        the current focus. In this work, we a) show that unsupervised labelling of a video dataset does not come for
+        free from strong feature encoders and b) propose a novel clustering method that allows pseudo-labelling of a
+        video dataset without any human annotations, by leveraging the natural correspondence between the audio and
+        visual modalities. An extensive analysis shows that the resulting clusters have high semantic overlap to ground
+        truth human labels. We further introduce the first benchmarking results on unsupervised labelling of common
+        video datasets Kinetics, Kinetics-Sound, VGG-Sound and AVE.</p>
+
+    <h2>BibTex</h2><span class="inner-pre" style="font-size: 14px">
+        <pre>
+@inproceedings{asano2020labelling,
+  title={Labelling unlabelled videos from scratch with multi-modal self-supervision},
+  author={Asano YM. and Patrick M. and Rupprecht C. and Vedaldi A.},
+  booktitle={arXiv - XXXX},
+  year={2020},
+}</pre></span>
+
+        <h2>Acknowledgments</h2>
+        <p>We are grateful for support from the Rhodes Trust (M.P.), Facebook (M.P.) and EPSRC Centre for Doctoral Training in
+            Autonomous Intelligent Machines & Systems [EP/L015897/1] (M.P. and Y.A.). C.R. is supported by ERC IDIU-638009.</p>
+    </div>
+    <hr>
+    <div class="row">
+      <div class="column left">
+        <h2> Index </h2>
+        <select id="datasetSelect" onchange="switchDataset()">
+          <option value="vggsound">VGG-Sound</option>
+          <option value="kinetics">Kinetics</option>
+        </select>
+        <select id="sortSelect" onchange="onSortChange()">
+          <option value="normal">Sort by:</option>
+          <option value="entropy">Entropy</option>
+        </select>
+        <div id="index"></div>
+      </div>
+
+      <div class="column right">
+        <div class="welcome">
+          <h2 id="welcome-title">Cluster Visualizer Tool</h2>
+          <div id="welcome-toggle-button" class="plus-minus-toggle welcome-toggle"></div><p class="welcome-toggle">HIDE MESSAGE</p>
+          <div class="welcome-message">
+            <p>We are visualizing the clusters that our model has learned on VGG-Sound and Kinetics-400. The index on the left can be sorted by entropy to allow finding very pure or very mixed clusters. Please note that the videos are hosted on YouTube - some might not be available anymore.</p>
+            <p>Here are a couple of interesting clusters you might want to look at first: </p>
+            <div class="examples">
+              <h3>VGG-Sound</h3>
+              <ul>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('vggsound', 188)">Cluster 188</a> — singing bowl, different visuals, same sounds.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('vggsound', 12)">Cluster 12</a> — sirens, different visuals, same sounds.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('vggsound', 128)">Cluster 40</a> — playing guitar, same visuals, different sounds.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('vggsound', 82)">Cluster 82</a> — firetruck, different visuals, same sounds.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('vggsound', 267)">Cluster 267</a> — engine, example of very pure cluster of man-made sound.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('vggsound', 141)">Cluster 141</a> — ocean, example of very pure cluster of nature sound.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('vggsound', 54)">Cluster 54</a> — the least pure cluster, however most contain text on a dark background.</li>
+                <li><a href="#welcome-title" onclick="showRandomCluster('vggsound')">Random Cluster</a></li>
+              </ul>
+            </div>
+            <div class="examples">
+              <h3>Kinetics-400</h3>
+              <ul>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('kinetics', 163)">Cluster 163</a> — presenting weather, same visuals, different sounds.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('kinetics', 19)">Cluster 19</a> — scuba diving, very pure cluster.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('kinetics', 181)">Cluster 181</a> — crying, different visuals, similar sounds.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('kinetics', 82)">Cluster 82</a> — live music and performances.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('kinetics', 378)">Cluster 378</a> — sound of wind, different outdoor activities.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('kinetics', 24)">Cluster 24</a> — miscellaneous, but all have background music.</li>
+                <li><a href="#welcome-title" onclick="showDatasetCluster('kinetics', 53)">Cluster 53</a> — miscellaneous, but all have light drum-based background music.</li>
+                <li><a href="#welcome-title" onclick="showRandomCluster('kinetics')">Random Cluster</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="title">
+          <h2 id="cluster-title">Cluster</h2>
+          <div id="tag-toggle-button" class="plus-minus-toggle collapsed tag-toggle"></div> <p class="tag-toggle">SHOW CLASSES</p>
+          <div id="cluster-tags" ><canvas id="chart-canvas"></canvas></div>
+        </div>
+        <div id="results"></div>
+      </div>
+    </div>
+  </body>
+</html>
