@@ -174,7 +174,7 @@ def main():
     restart_from_checkpoint(
         os.path.join(args.dump_path, "checkpoint.pth.tar"),
         run_variables=to_restore,
-        state_dict=model,
+        model=model,
         optimizer=optimizer,
         amp=apex.amp if args.use_fp16 else None,
     )
