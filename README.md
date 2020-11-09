@@ -134,8 +134,8 @@ python3 video_retrieval.py \
 
 To obtain an interactive cluster visualization such as the one provided in the supplementary material, and the [homepage](https://www.robots.ox.ac.uk/~vgg/research/selavi/#demo), run:
 ```
-python3 cluster_vis/get_clusters_vggsounds.py --ckpt_path ${CKPT_PATH};
-python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${CKPT_PATH};
+python3 cluster_vis/get_clusters_vggsounds.py --ckpt_path ${VGG_SOUND_CKPT_PATH};
+python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${KINETICS_CKPT_PATH};
 cd cluster_vis;
 python3 preprocess.py --kinetics_path selavi_kinetics.pkl --vgg_sound_path selavi_vgg_sounds.pkl
 
