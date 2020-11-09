@@ -34,12 +34,20 @@ N.B. Kinetics-Sound is a subset of Kinetics.
 # Model Zoo
 We provide serveral baseline SeLaVi pre-trained models with R(2+1)-D-18 video and Resnet-9 audio architecture in torchvision format in different datasets.
 
-| method | dataaset  | clusters | epochs  | Match | Dist     | Heads   | url |
-|--------|---------- |----------|---------|------ |-------   | --------| --------------------|
-| SeLaVi | AVE | 309      | 150     | True  | Gaussian | 10      | [model](https://dl.fbaipublicfiles.com/selavi/selavi_ave_150.pth) |
-| SeLaVi | Kinetics-Sound | 309      | 150     | True  | Gaussian | 10      | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics_sound_150.pth) |
-| SeLaVi | Kinetics | 309      | 45     | True  | Gaussian | 10      | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics_45.pth) |
-| SeLaVi | VGG-Sound | 309      | 150     | True  | Gaussian | 10      | [model](https://dl.fbaipublicfiles.com/selavi/selavi_vgg_sound_150.pth) |
+| Method | Dataset        | Clusters | Setting   | Heads | NMI   | Accuracy | url                                                                          |
+|--------|----------------|----------|-----------|-------|-------|----------|------------------------------------------------------------------------------|
+| SeLaVi | AVE            | 28       | MA, G, MH | 10    | 66.1% | 58.0%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_ave_150.pth)            |
+| SeLaVi | Kinetics-Sound | 32       | MA, G, MH | 10    | 49.6% | 44.1%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics_sound_150.pth) |
+| SeLaVi | Kinetics       | 400      | MA, G, MH | 10    | 25.3% | 7.1%     | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics_45.pth)        |
+| SeLaVi | VGG-Sound      | 309      | MA, G, MH | 10    | 54.6% | 30.9%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_vgg_sound_150.pth)      |
+
+MA = Modality Alignment, G = Gaussian Marginals, DH = Decorrelated Heads (see paper for details)
+
+## Further details for the VGG-Sound trained model
+
+| Model            | NMI   | aNMI  | aRI   | Accuracy | Purity | HMDB-51 (3-fold) | UCF-101 (3-fold) |
+|------------------|-------|-------|-------|----------|--------|------------------|------------------|
+| SeLaVi VGG-Sound | 54.6% | 52.0% | 20.6% | 30.9%    | 36.2%  |  55.1% (55.4, 54.8, 55.1)         | 86.1% (86.0, 85.9, 86.5)            |
 
 
 # Running SeLaVi unsupervised training
@@ -61,7 +69,7 @@ python -m torch.distributed.launch --nproc_per_node=8 main.py \
 --headcount 10 \
 --match True \
 --distribution gauss \
---ind_groups 2 \
+--ind_groups 2 
 ```
 
 ## Multi-node training
@@ -86,12 +94,13 @@ python3 get_clusters.py \
 --output_dir ${OUTPUT_DIR} \
 --exp_desc ${EXP_DESC} \
 --mode train \
---headcount ${HEADCOUNT} \
+--headcount ${HEADCOUNT}
 
 python3 clustering_metircs.py \
 --path ${OUTPUT_DIR}/${EXP_DESC}.pkl \
---ncentroids ${NUM_CLS} \
-Set NUM_CLS={kinetics: 400, ave: 28, vggsound: 309, kinetics_sounds: 32}
+--ncentroids ${NUM_CLS} 
+
+# Set NUM_CLS={kinetics: 400, ave: 28, vggsound: 309, kinetics_sounds: 32}
 ```
 
 ## Evaluate models: Video Action Recognition
@@ -105,7 +114,7 @@ python3 finetune_video.py \
 --workers 10 \
 --weights_path ${WEIGHTS_PATH} \
 --output_dir ${OUTPUT_DIR} \
---num_clusters ${NUM_CLUSTERS} \
+--num_clusters ${NUM_CLUSTERS} 
 ```
 
 ## Evaluate models: Video Retrieval
@@ -118,7 +127,7 @@ python3 video_retrieval.py \
 --batch_size 32 \
 --workers 10 \
 --weights_path ${WEIGHTS_PATH} \
---output_dir ${OUTPUT_DIR} \
+--output_dir ${OUTPUT_DIR}
 ```
 
 # Visualizing Clusters
@@ -130,7 +139,7 @@ python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${CKPT_PATH};
 cd cluster_vis;
 python3 preprocess.py --kinetics_path selavi_kinetics.pkl --vgg_sound_path selavi_vgg_sounds.pkl
 
-open index.html in your browser 
+# open index.html in your browser 
 ```
 
 # License
