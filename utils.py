@@ -10,13 +10,10 @@ from logging import getLogger
 import pickle
 import os
 import signal
-import socket
 import time
 
 import numpy as np
 import torch
-from torch import nn
-from torch.nn.parameter import Parameter
 
 from src.logger import create_logger, PD_Stats
 

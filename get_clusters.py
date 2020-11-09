@@ -5,15 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import numpy as np
 import os
 import pickle
-from scipy.stats import entropy
-from sklearn.cluster import KMeans
-from sklearn.metrics.cluster import (
-    normalized_mutual_info_score, 
-    adjusted_mutual_info_score
-)
+
 import torch
 import torch.distributed as dist
 from torch.utils.data.sampler import (
@@ -25,8 +19,7 @@ from datasets.AVideoDataset import AVideoDataset
 from utils import (
     init_distributed_mode, 
     init_signal_handler, 
-    load_model_parameters, 
-    fix_random_seeds
+    load_model_parameters
 )
 from model import load_model
 

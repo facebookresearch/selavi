@@ -6,12 +6,9 @@
 #
 
 import numpy as np
-import os
 import pickle
 import torch
 from scipy.stats import entropy
-from sklearn.cluster import KMeans
-from sklearn.manifold import TSNE
 from sklearn.metrics.cluster import (
     normalized_mutual_info_score, 
     adjusted_mutual_info_score, 

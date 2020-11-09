@@ -5,11 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import argparse
 import torch
 from torch import nn
 import torchvision
-import math
 import torch.nn.functional as F
 
 

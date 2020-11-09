@@ -9,13 +9,9 @@ import av
 import ffmpeg
 from joblib import Parallel, delayed
 from multiprocessing import Manager
-import numpy as np
 import os
 import pickle
-import random
 import torch
-import torchvision
-from torchvision import transforms
 import torch.utils.data
 import glob
 

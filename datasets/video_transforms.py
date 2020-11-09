@@ -8,8 +8,6 @@
 import math
 import numpy as np
 import torch
-import torchvision
-import random
 
 
 MEAN=[0.45, 0.45, 0.45]

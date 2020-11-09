@@ -13,7 +13,6 @@ from sklearn.neighbors import NearestNeighbors
 import time
 import torch
 from torch.utils.data.dataloader import default_collate
-from torch.utils.data.sampler import Sampler, SubsetRandomSampler
 
 from datasets.AVideoDataset import AVideoDataset
 from model import Flatten, load_model

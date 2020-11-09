@@ -9,20 +9,17 @@ from collections import defaultdict
 import datetime
 import numpy as np
 import os
-import sys
 import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data.dataloader import default_collate
 from torch.utils.tensorboard import SummaryWriter
-import torchvision
 
 # Custom imports
 from src.warmup_scheduler import GradualWarmupScheduler
 from utils import (
     AverageMeter,
-    accuracy,
     aggregrate_video_accuracy,
     initialize_exp,
     getLogger,
@@ -31,7 +28,7 @@ from utils import (
     load_model_parameters
 )
 from datasets.AVideoDataset import AVideoDataset
-from model import load_model, Identity, get_video_dim
+from model import load_model, get_video_dim
 
 logger = getLogger()
 

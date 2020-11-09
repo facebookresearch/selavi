@@ -6,7 +6,6 @@
 #
 
 import argparse
-from utils import bool_flag
 
 def parse_arguments():
     def str2bool(v):

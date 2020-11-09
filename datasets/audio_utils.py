@@ -6,13 +6,9 @@
 #
 
 import ffmpeg
-from fractions import Fraction
-import math
 import numpy as np
 from python_speech_features import logfbank
 import torch
-from torchvision import transforms
-from scipy.io import wavfile
 
 
 def get_spec(
