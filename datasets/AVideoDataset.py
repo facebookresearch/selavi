@@ -91,7 +91,7 @@ def valid_video(vid_idx, vid_path):
             None
         )
         if audio_stream and video_stream and float(video_stream['duration']) > 1.1 and float(audio_stream['duration']) > 1.1:
-            print(f"{vid_idx}: True", flush=True)
+            print(f"{vid_idx}: True", end='\r', flush=True)
             return True
         else:
             print(f"{vid_idx}: False (duration short/ no audio)", flush=True)

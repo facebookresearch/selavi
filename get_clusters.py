@@ -103,6 +103,7 @@ def get_cluster_assignments_gpu(
     dtype = torch.float64 if args.headcount == 1 else torch.float32
 
     for batch_idx, batch in enumerate(dataloader):
+        print(f"{batch_idx}/{len(dataloader)}", end='\r', flush=True)
         # Get data
         video, audio, label, _, _ = batch
 

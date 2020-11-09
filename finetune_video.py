@@ -208,24 +208,22 @@ def main(args, writer):
         target_fps=30,
         decode_audio=False,
     )
-    train_sampler = None
-    test_sampler = None
 
     # Creating dataloaders
     logger.info("Creating data loaders")
     data_loader = torch.utils.data.DataLoader(
         dataset, 
         batch_size=args.batch_size,
-        sampler=train_sampler,
+        sampler=None,
         num_workers=args.workers,
         pin_memory=True, 
         drop_last=True,
-        shuffle=True if train_sampler is None else False
+        shuffle=True
     )
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test, 
         batch_size=args.batch_size,
-        sampler=test_sampler, 
+        sampler=None,
         num_workers=args.workers,
         pin_memory=True, 
         drop_last=False
