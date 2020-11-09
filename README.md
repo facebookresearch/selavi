@@ -17,20 +17,6 @@ Even very strong feature representations such as a supervisedly pretrained R(2+1
 
 Since our method treats each modality as an _augmentation_ from another, our method learn to give stable predictions even if one modality is degraded.
 
-# Installation
-
-This repo was tested with Ubuntu 16.04.5 LTS, Python 3.7.5, PyTorch 1.3.1, Torchvision 0.4.1, and CUDA 10.0.
-
-1. Install required packages using `conda env create -f environment.yml`
-
-2. Activate conda environment using `conda activate lab_vid`
-
-3. Ensure pre-training datasets (VGG-Sound, Kinetics, AVE) are pre-processed such that the folder structure is in the form: 
-```
-{dataset_name}/{train,val,test}/{class_name}/{video_name}.mp4
-```
-N.B. Kinetics-Sound is a subset of Kinetics. 
-
 # Model Zoo
 We provide serveral baseline SeLaVi pre-trained models with R(2+1)-D-18 video and Resnet-9 audio architecture in torchvision format in different datasets.
 
@@ -50,7 +36,36 @@ MA = Modality Alignment, G = Gaussian Marginals, DH = Decorrelated Heads (see pa
 | SeLaVi VGG-Sound | 54.6% | 52.0% | 20.6% | 30.9%    | 36.2%  |  55.1% (55.4, 54.8, 55.1)         | 86.1% (86.0, 85.9, 86.5)            |
 
 
+## Download and or visualize clusters:
+
+You can download the csv files for our clusters here: [VGG-Sound](https://www.robots.ox.ac.uk/~vgg/research/selavi/data/vgg_sound_clusters.csv), [Kinetics](https://www.robots.ox.ac.uk/~vgg/research/selavi/data/kinetics_clusters.csv). Note: as everywhere in the paper, we're only taking a single crop in space and time for generating these. 
+
+SeLaVi is an efficient and simple method for learning labels of multi-modal audio-visual data. 
+To interactively visualize the clusters we obtain for Kinetics and VGG-Sound, as we do on our [homepage](https://www.robots.ox.ac.uk/~vgg/research/selavi/#demo), run:
+```
+python3 cluster_vis/get_clusters_vggsounds.py --ckpt_path ${VGG_SOUND_CKPT_PATH};
+python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${KINETICS_CKPT_PATH};
+cd cluster_vis;
+python3 preprocess.py --kinetics_path selavi_kinetics.pkl --vgg_sound_path selavi_vgg_sounds.pkl
+
+# open index.html in your browser 
+```
+
 # Running SeLaVi unsupervised training
+
+## Installation
+
+This repo was tested with Ubuntu 16.04.5 LTS, Python 3.7.5, PyTorch 1.3.1, Torchvision 0.4.1, and CUDA 10.0.
+
+1. Install required packages using `conda env create -f environment.yml`
+
+2. Activate conda environment using `conda activate lab_vid`
+
+3. Ensure pre-training datasets (VGG-Sound, Kinetics, AVE) are pre-processed such that the folder structure is in the form: 
+```
+{dataset_name}/{train,val,test}/{class_name}/{video_name}.mp4
+```
+N.B. Kinetics-Sound is a subset of Kinetics. 
 
 ## Single-node training
 SeLaVi is very simple to implement and experiment with.
@@ -128,18 +143,6 @@ python3 video_retrieval.py \
 --workers 10 \
 --weights_path ${WEIGHTS_PATH} \
 --output_dir ${OUTPUT_DIR}
-```
-
-# Visualizing Clusters
-
-To obtain an interactive cluster visualization such as the one provided in the supplementary material, and the [homepage](https://www.robots.ox.ac.uk/~vgg/research/selavi/#demo), run:
-```
-python3 cluster_vis/get_clusters_vggsounds.py --ckpt_path ${CKPT_PATH};
-python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${CKPT_PATH};
-cd cluster_vis;
-python3 preprocess.py --kinetics_path selavi_kinetics.pkl --vgg_sound_path selavi_vgg_sounds.pkl
-
-# open index.html in your browser 
 ```
 
 # License
