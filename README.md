@@ -50,6 +50,20 @@ MA = Modality Alignment, G = Gaussian Marginals, DH = Decorrelated Heads (see pa
 | SeLaVi VGG-Sound | 54.6% | 52.0% | 20.6% | 30.9%    | 36.2%  |  55.1% (55.4, 54.8, 55.1)         | 86.1% (86.0, 85.9, 86.5)            |
 
 
+## Download and or visualize clusters:
+
+You can download the csv files for our clusters here: [VGG-Sound](https://www.robots.ox.ac.uk/~vgg/research/selavi/data/vgg_sound_clusters.csv), [Kinetics](https://www.robots.ox.ac.uk/~vgg/research/selavi/data/kinetics_clusters.csv). Note: as everywhere in the paper, we're only taking a single crop in space and time for generating these. 
+
+To obtain an interactive cluster visualization such as the one provided in the supplementary material, and the [homepage](https://www.robots.ox.ac.uk/~vgg/research/selavi/#demo), run:
+```
+python3 cluster_vis/get_clusters_vggsounds.py --ckpt_path ${VGG_SOUND_CKPT_PATH};
+python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${KINETICS_CKPT_PATH};
+cd cluster_vis;
+python3 preprocess.py --kinetics_path selavi_kinetics.pkl --vgg_sound_path selavi_vgg_sounds.pkl
+
+# open index.html in your browser 
+```
+
 # Running SeLaVi unsupervised training
 
 ## Single-node training
@@ -128,18 +142,6 @@ python3 video_retrieval.py \
 --workers 10 \
 --weights_path ${WEIGHTS_PATH} \
 --output_dir ${OUTPUT_DIR}
-```
-
-# Visualizing Clusters
-
-To obtain an interactive cluster visualization such as the one provided in the supplementary material, and the [homepage](https://www.robots.ox.ac.uk/~vgg/research/selavi/#demo), run:
-```
-python3 cluster_vis/get_clusters_vggsounds.py --ckpt_path ${VGG_SOUND_CKPT_PATH};
-python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${KINETICS_CKPT_PATH};
-cd cluster_vis;
-python3 preprocess.py --kinetics_path selavi_kinetics.pkl --vgg_sound_path selavi_vgg_sounds.pkl
-
-# open index.html in your browser 
 ```
 
 # License
