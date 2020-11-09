@@ -17,20 +17,6 @@ Even very strong feature representations such as a supervisedly pretrained R(2+1
 
 Since our method treats each modality as an _augmentation_ from another, our method learn to give stable predictions even if one modality is degraded.
 
-# Installation
-
-This repo was tested with Ubuntu 16.04.5 LTS, Python 3.7.5, PyTorch 1.3.1, Torchvision 0.4.1, and CUDA 10.0.
-
-1. Install required packages using `conda env create -f environment.yml`
-
-2. Activate conda environment using `conda activate lab_vid`
-
-3. Ensure pre-training datasets (VGG-Sound, Kinetics, AVE) are pre-processed such that the folder structure is in the form: 
-```
-{dataset_name}/{train,val,test}/{class_name}/{video_name}.mp4
-```
-N.B. Kinetics-Sound is a subset of Kinetics. 
-
 # Model Zoo
 We provide serveral baseline SeLaVi pre-trained models with R(2+1)-D-18 video and Resnet-9 audio architecture in torchvision format in different datasets.
 
@@ -65,6 +51,20 @@ python3 preprocess.py --kinetics_path selavi_kinetics.pkl --vgg_sound_path selav
 ```
 
 # Running SeLaVi unsupervised training
+
+## Installation
+
+This repo was tested with Ubuntu 16.04.5 LTS, Python 3.7.5, PyTorch 1.3.1, Torchvision 0.4.1, and CUDA 10.0.
+
+1. Install required packages using `conda env create -f environment.yml`
+
+2. Activate conda environment using `conda activate lab_vid`
+
+3. Ensure pre-training datasets (VGG-Sound, Kinetics, AVE) are pre-processed such that the folder structure is in the form: 
+```
+{dataset_name}/{train,val,test}/{class_name}/{video_name}.mp4
+```
+N.B. Kinetics-Sound is a subset of Kinetics. 
 
 ## Single-node training
 SeLaVi is very simple to implement and experiment with.
