@@ -1,5 +1,6 @@
 # SeLaVi: Labelling unlabelled videos from scratch with multi-modal self-supervision
 This code provides a PyTorch implementation and pretrained models for **SeLaVi** (Labelling unlabelled videos from scratch with multi-modal self-supervision), as described in the paper [Labelling unlabelled videos from scratch with multi-modal self-supervision](https://arxiv.org/abs/2006.13662).
+SeLaVi is an efficient and simple method for learning labels of multi-modal audio-visual data. 
 
 <div align="center">
   <img width="100%" alt="SeLaVi Illustration" src="https://www.robots.ox.ac.uk/~vgg/research/selavi/data/method.jpg">
@@ -40,7 +41,7 @@ MA = Modality Alignment, G = Gaussian Marginals, DH = Decorrelated Heads (see pa
 
 You can download the csv files for our clusters here: [VGG-Sound](https://www.robots.ox.ac.uk/~vgg/research/selavi/data/vgg_sound_clusters.csv), [Kinetics](https://www.robots.ox.ac.uk/~vgg/research/selavi/data/kinetics_clusters.csv). Note: as everywhere in the paper, we're only taking a single crop in space and time for generating these. 
 
-To obtain an interactive cluster visualization such as the one provided in the supplementary material, and the [homepage](https://www.robots.ox.ac.uk/~vgg/research/selavi/#demo), run:
+To interactively visualize the clusters we obtain for Kinetics and VGG-Sound, as we do on our [homepage](https://www.robots.ox.ac.uk/~vgg/research/selavi/#demo), run:
 ```
 python3 cluster_vis/get_clusters_vggsounds.py --ckpt_path ${VGG_SOUND_CKPT_PATH};
 python3 cluster_vis/get_clusters_kinetics.py --ckpt_path ${KINETICS_CKPT_PATH};
