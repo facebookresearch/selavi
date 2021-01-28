@@ -14,8 +14,8 @@ def main():
     K = 309
     gauss_path = "path_gauss_ckp-100.pth"
     uniform_path = "path_uniform_ckp-100.pth"
-    ckpt_dir_dict = {'uniform': uniform_path, 'guassian': gauss_path}
-    for distribtion in ['uniform', 'guassian']:
+    ckpt_dir_dict = {'uniform': uniform_path, 'gaussian': gauss_path}
+    for distribtion in ['uniform', 'gaussian']:
         path = ckpt_dir_dict[distribtion]
         ckpt = torch.load(path)
         selflabels = ckpt['selflabels']
@@ -28,6 +28,8 @@ def main():
             u, counts = np.unique(selflabels[:, i].cpu().numpy(), return_counts=True)
             plt.plot(sorted(counts)[::-1], label="SK")
             plt.plot(sorted(target_counts)[::-1], label="Target")
+            plt.xlabel('cluster-ID')
+            plt.ylabel('#Assigned images')
             plt.legend()
             plt.savefig(f"cluster_vis/{distribtion}_hist_{i}.png")
             plt.clf()
