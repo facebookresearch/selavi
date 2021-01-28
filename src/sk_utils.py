@@ -11,6 +11,7 @@ import time
 import torch
 import torch.distributed as dist
 from torch.utils.data.sampler import SubsetRandomSampler
+from scipy.stats import entropy
 from sklearn.metrics.cluster import (
     normalized_mutual_info_score,
     adjusted_mutual_info_score
@@ -20,27 +21,26 @@ from utils import trigger_job_requeue
 
 
 def cluster(
-    args,
-    selflabels,
-    dataset,
-    model,
-    logger,
-    writer,
-    group,
-    iter_num,
-    sk_counter
-):
+        args,
+        selflabels,
+        dataset,
+        model,
+        sk_counter,
+        logger,
+        writer,
+        group,
+        iter_num):
     selflabels_old = selflabels.clone()
-    
+
     # get cluster assignments
     with torch.no_grad():
         selflabels = get_cluster_assignments_gpu(
             args, dataset, model, logger, writer, group, iter_num)
     self_labels_np  = selflabels[:, 0].cpu().numpy()
-    
+
     # increment counter
     sk_counter += 1
-    
+
     if selflabels is not None:
         nmi_v = normalized_mutual_info_score(
             self_labels_np,
@@ -120,6 +120,12 @@ def cluster(
                 np.mean(purities),
                 iter_num
             )
+    # signal received, relaunch experiment
+    if os.environ['SIGNAL_RECEIVED'] == 'True':
+        if args.rank == 0:
+            logger.info("Beginning requeue", logger=logger)
+            trigger_job_requeue(os.path.join(
+                args.dump_path, "checkpoint.pth.tar"))
     # Ensure processes reach to end of optim clusters
     if group is not None:
         dist.barrier(group=group)
@@ -129,23 +135,23 @@ def cluster(
 
 
 def get_cluster_assignments_gpu(
-    args, 
-    dataset, 
-    model, 
-    logger=None, 
-    writer=None, 
-    group=None, 
-    iter_num=0
+        args,
+        dataset,
+        model,
+        logger=None,
+        writer=None,
+        group=None,
+        iter_num=0
 ):
     # clear cache at beginning
     torch.cuda.empty_cache()
 
     # Put model in eval mode
     model.eval()
-    
+
     # Get length of dataset
     N = len(dataset)
-    
+
     # this process deals only with a subset of the dataset
     sampler = None
     local_nmb_data = N // args.world_size
@@ -248,6 +254,36 @@ def get_cluster_assignments_gpu(
                 dist.barrier()
 
         # 2. solve label assignment via sinkhorn-knopp:
+        if args.match and (iter_num == 0):
+            for head in order_heads[hd_grp_idx::args.ind_groups]:
+                # optimize to get labels
+                if args.headcount == 1:
+                    if args.rank == 0:
+                        PS_a_sk = PS_a
+                        PS_v_sk = PS_v
+                    else:
+                        PS_v_sk, PS_a_sk = None, None
+                    head_a = model.module.mlp_a
+
+                else:
+                    head_a = getattr(model.module, f'mlp_a{head}')
+                    head_v = getattr(model.module, f'mlp_v{head}')
+                    if args.rank == 0:
+                        PS_a_sk = torch.nn.functional.softmax(head_a.forward(PS_a),
+                                                              dim=1, dtype=torch.float64)
+                        PS_v_sk = torch.nn.functional.softmax(head_v.forward(PS_v),
+                                                              dim=1, dtype=torch.float64)
+                    else:
+                        PS_v_sk, PS_a_sk = None, None
+                # align heads of audio and video:
+                match_order(args,
+                            PS_v_sk,
+                            PS_a_sk,
+                            list(head_a.modules())[-1] if model.module.use_mlp else head_a,
+                            steps=50000,
+                            restarts=2,
+                            logger=logger
+                            )
         if args.rank == 0:
             logger.info("Optimizing via sinkhorn-knopp on master GPU")
             if os.environ['SIGNAL_RECEIVED'] == 'True':
@@ -258,6 +294,7 @@ def get_cluster_assignments_gpu(
 
             _costs = [0 for i in range(args.headcount)]
             _times = [0 for i in range(args.headcount)]
+
 
             # optimize heads
             for head in order_heads[hd_grp_idx::args.ind_groups]:
@@ -273,27 +310,17 @@ def get_cluster_assignments_gpu(
                                                           dim=1, dtype=torch.float64)
                     PS_v_sk = torch.nn.functional.softmax(head_v.forward(PS_v),
                                                           dim=1, dtype=torch.float64)
-                # align heads of audio and video:
-                if args.match:
-                    if iter_num == 0:
-                        match_order(
-                            PS_v_sk,
-                            PS_a_sk,
-                            list(head_a.modules())[-1] if model.module.use_mlp else head_a,
-                            steps=50000,
-                            restarts=2,
-                            logger=logger
-                        )
 
                 # move activations to PS_v_sk
-                torch.mul(PS_v_sk, PS_a_sk, out=PS_v_sk)  
+                torch.mul(PS_v_sk, PS_a_sk, out=PS_v_sk)
                 sk_start = time.time()
 
-                # optimize 
-                cost, L_head = optimize_L_sk_gpu(args, PS_v_sk, logger=logger)
+                # optimize
+                cost, L_head = optimize_L_sk_gpu(args, PS_v_sk, hc=head, logger=logger)
+                # cost, L_head = optimize_L_sk_gpu_log(args, PS_v_sk, hc=head, logger=logger)
 
                 # put it in correct order
-                L[indices, head] = L_head.to('cuda')  
+                L[indices, head] = L_head.to('cuda')
 
                 _costs[head] = cost
                 _times[head] = time.time() - sk_start
@@ -329,58 +356,75 @@ def get_cluster_assignments_gpu(
     return L
 
 
-def optimize_L_sk_gpu(args, PS, logger=None):
+def optimize_L_sk_gpu(args, PS, hc, logger=None):
+    print('doing optimization now',flush=True)
 
     # create L
     N = PS.size(0)
     K = PS.size(1)
     tt = time.time()
-    r = torch.ones((K, 1), dtype=torch.float64, device='cuda') / K
+    _K_dist = torch.ones((K, 1), dtype=torch.float64, device='cuda') # / K
     if args.distribution != 'default':
         marginals_argsort = torch.argsort(PS.sum(0))
-        if args.distribution == 'gauss':
-            r = (torch.randn(size=(K, 1), dtype=torch.float64, device='cuda') / 0.1 + 1) * N / K
-            r = torch.clamp(r, min=1)
-        if args.distribution == 'zipf':
-            r = torch.cuda.DoubleTensor(torch.tensor(np.random.zipf(a=2, size=K)).view(K,1))
-            r = torch.clamp(r, min=1)
+        if (args.dist is None) or args.diff_dist_every:
+            if args.distribution == 'gauss':
+                if args.diff_dist_per_head:
+                    _K_dists = [(torch.randn(size=(K, 1), dtype=torch.float64, device='cuda')*args.gauss_sd + 1) * N / K
+                                for _ in range(args.headcount)]
+                    args.dist = _K_dists
+                    _K_dist = _K_dists[hc]
+                else:
+                    _K_dist = (torch.randn(size=(K, 1), dtype=torch.float64, device='cuda')*args.gauss_sd + 1) * N / K
+                    _K_dist = torch.clamp(_K_dist, min=1)
+                    args.dist = _K_dist
+            if args.rank == 0:
+                logger.info(f"distribution used: {_K_dist}")
 
-        logger.info(f"distribution used: {r}")
-        r /= r.sum()
-        r[marginals_argsort] = torch.sort(r)[0]
+        else:
+            if args.diff_dist_per_head:
+                _K_dist = args.dist[hc]
+            else:
+                _K_dist = args.dist
+        _K_dist[marginals_argsort] = torch.sort(_K_dist)[0]
 
-    c = torch.ones((N, 1), dtype=torch.float64, device='cuda') / N
+    beta = torch.ones((N, 1), dtype=torch.float64, device='cuda') / N
     PS.pow_(0.5*args.lamb)
-    inv_K = 1./K
-    inv_N = 1./N
+    r = 1./_K_dist
+    r /= r.sum()
+
+    c = 1./N
     err = 1e6
     _counter = 0
+
     ones = torch.ones(N, device='cuda:0', dtype=torch.float64)
-    while err > 1e-1:
-        r = inv_K / torch.matmul(c.t(), PS).t()
-        c_new = inv_N / torch.matmul(PS, r)
+    while (err > 1e-1) and (_counter < 2000):
+        alpha = r / torch.matmul(beta.t(), PS).t()
+        beta_new = c / torch.matmul(PS, alpha)
         if _counter % 10 == 0:
-            err = torch.sum(torch.abs((c.squeeze() / c_new.squeeze()) - ones)).cpu().item()
-        c = c_new
+            err = torch.sum(torch.abs((beta.squeeze() / beta_new.squeeze()) - ones)).cpu().item()
+        beta = beta_new
         _counter += 1
-    logger.info(f"error: {err}, step : {_counter}")
-    
+    if args.rank == 0:
+        logger.info(f"error: {err}, step : {_counter}")
+
     # inplace calculations
-    torch.mul(PS, c, out=PS)
-    torch.mul(r.t(), PS, out=PS)
+    torch.mul(PS, beta, out=PS)
+    torch.mul(alpha.t(), PS, out=PS)
     newL = torch.argmax(PS, 1).cuda()
 
     # return back to obtain cost (optional)
-    torch.mul((1./r).t(), PS, out=PS)
-    torch.mul(PS, 1./c, out=PS)
+    torch.mul((1./alpha).t(), PS, out=PS)
+    torch.mul(PS, 1./beta, out=PS)
     sol = np.nansum(torch.log(PS[torch.arange(0, len(newL)).long(), newL]).cpu().numpy())
     cost = -(1. / args.lamb) * sol / N
-    logger.info(f"opt took {(time.time() - tt) / 60.} min, {_counter} iters")
+    if args.rank == 0:
+        logger.info(f"opt took {(time.time() - tt) / 60.} min, {_counter} iters")
     return cost, newL
 
-
-def match_order(emb1, emb2_in, W2, steps=50000, restarts=2, logger=None):
-    with torch.no_grad():
+@torch.no_grad()
+def match_order(args, emb1, emb2_in, W2, steps=50000, restarts=2, logger=None):
+    fin_perm = torch.arange(0, len(W2.bias.data)).cuda()
+    if args.rank == 0:
         assert type(W2) == torch.nn.modules.linear.Linear
         K = emb1.shape[1]
         def c(a, b):
@@ -389,21 +433,19 @@ def match_order(emb1, emb2_in, W2, steps=50000, restarts=2, logger=None):
         cost = c(emb1, emb2_in)
         best_cost = cost
         logger.info(f'initial cost: {cost:.1f}')
-
-        fin_perm = torch.arange(0, K)
         for retries in range(restarts):
             cost_try = cost.item()
             perm = torch.arange(0, K)
             emb2 = emb2_in.clone().detach()
             for _iter in range(steps):
-                # what would happen if we switch cluster i with j
-                [i, j] = np.random.choice(K, 2, replace=False) 
+                # what would happen if we switch cluster i with j in emb2
+                [i, j] = np.random.choice(K, 2, replace=False)
                 current = c(emb1[:,i], emb2[:,i])  + c(emb1[:,j], emb2[:,j])
                 future =  c(emb1[:,i], emb2[:,j])  + c(emb1[:,j], emb2[:,i])
                 delta = current - future
                 if delta > 0:
                     # switch i and j
-                    emb1[:,j], emb2[:,i] = emb1[:,i].clone().detach(), emb2[:,j].clone().detach()
+                    emb2[:,j], emb2[:,i] = emb2[:,i].clone().detach(), emb2[:,j].clone().detach()
                     cost_try -= delta
                     _i = int(perm[i])
                     perm[i] = int(perm[j])
@@ -413,10 +455,13 @@ def match_order(emb1, emb2_in, W2, steps=50000, restarts=2, logger=None):
                     break
 
             cost_try = c(emb1, emb2_in[:, perm])
-            logger.info(f"cost of this try: {cost_try:.1f}")
+            logger.info(f"cost of this try: {cost_try:.2f}")
             if cost_try < best_cost:
                 best_cost = cost_try
-                fin_perm = perm
-        logger.info(f"final cost:    {best_cost:.1f}")
-        W2.bias.data = W2.bias.data[fin_perm]
-        W2.weight.data = W2.weight.data[fin_perm]
+                fin_perm = perm.cuda()
+    dist.broadcast(fin_perm, 0)
+    fin_perm = fin_perm.cpu()
+    if args.rank == 0:
+        logger.info(f"final cost: {best_cost:.2f}")
+    W2.bias.data = W2.bias.data[fin_perm]
+    W2.weight.data = W2.weight.data[fin_perm]

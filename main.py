@@ -34,7 +34,8 @@ from utils import (
     init_distributed_mode,
     init_signal_handler,
     trigger_job_requeue,
-    get_loss
+    get_loss,
+    warmup_batchnorm
 )
 
 logger = getLogger()
@@ -42,6 +43,7 @@ logger = getLogger()
 # global variables
 sk_schedule = None
 group = None
+global sk_counter
 sk_counter = 0
 
 def main():
@@ -72,7 +74,7 @@ def main():
         sample_rate=args.sample_rate,
         num_train_clips=args.num_train_clips,
         train_crop_size=args.train_crop_size,
-        test_crop_size=args.test_crop_size,        
+        test_crop_size=args.test_crop_size,
         num_data_samples=args.num_data_samples,
         colorjitter=args.colorjitter,
         use_grayscale=args.use_grayscale,
@@ -99,14 +101,14 @@ def main():
     )
     logger.info("Loaded data with {} videos.".format(len(train_dataset)))
 
-    # Load model
+    # Load model
     model = load_model(
-        vid_base_arch=args.vid_base_arch, 
+        vid_base_arch=args.vid_base_arch,
         aud_base_arch=args.aud_base_arch,
         use_mlp=args.use_mlp,
-        num_classes=args.mlp_dim, 
+        num_classes=args.mlp_dim,
         pretrained=False,
-        norm_feat=True,
+        norm_feat=False,
         use_max_pool=False,
         headcount=args.headcount,
     )
@@ -142,7 +144,7 @@ def main():
         )
     else:
         lr_scheduler = None
-        
+
     logger.info("Building optimizer done.")
 
     # init mixed precision
@@ -169,7 +171,7 @@ def main():
     logger.info(f'remaining SK opts @ epochs {[np.round(1.0 * t / N_dl, 2) for t in sk_schedule]}')
 
     # optionally resume from a checkpoint
-    to_restore = {"epoch": 0, 'selflabels': selflabels}
+    to_restore = {"epoch": 0, 'selflabels': selflabels, 'dist':args.dist}
     restart_from_checkpoint(
         os.path.join(args.dump_path, "checkpoint.pth.tar"),
         run_variables=to_restore,
@@ -178,25 +180,32 @@ def main():
         amp=apex.amp if args.use_fp16 else None,
     )
     start_epoch = to_restore["epoch"]
-    selflabels = to_restore['selflabels']
+    selflabels = to_restore["selflabels"]
+    args.dist = to_restore["dist"]
 
     # Set CuDNN benhcmark
     cudnn.benchmark = True
 
     # Restart schedule correctly
     if start_epoch != 0:
-        include = [(qq / N_dl > args.start_epoch) for qq in sk_schedule]
-        global sk_counter
+        include = [(qq / N_dl > start_epoch) for qq in sk_schedule]
         # (total number of sk-opts) - (number of sk-opts outstanding)
+        global sk_counter
         sk_counter = len(sk_schedule) - sum(include)
         sk_schedule = (np.array(sk_schedule)[include]).tolist()
         if lr_scheduler:
             [lr_scheduler.step() for _ in range(to_restore['epoch'])]
 
+    if start_epoch == 0:
+        train_loader.sampler.set_epoch(999)
+        warmup_batchnorm(args, model, train_loader, batches=20, group=group)
+
     for epoch in range(start_epoch, args.epochs):
 
         # train the network for one epoch
         logger.info("============ Starting epoch %i ... ============" % epoch)
+        if writer:
+            writer.add_scalar('train/epoch', epoch, epoch)
 
         # set sampler
         train_loader.sampler.set_epoch(epoch)
@@ -214,10 +223,12 @@ def main():
         if args.rank == 0:
             save_dict = {
                 "epoch": epoch + 1,
+                "dist": args.dist,
                 "model": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "selflabels": selflabels
             }
+
             if args.use_fp16:
                 save_dict["amp"] = apex.amp.state_dict()
             torch.save(
@@ -232,8 +243,10 @@ def main():
 
 
 def train(train_loader, model, optimizer, epoch, writer, selflabels):
-    
+
     global sk_schedule
+    global sk_counter
+
 
     # Put model in train mode
     model.train()
@@ -250,7 +263,7 @@ def train(train_loader, model, optimizer, epoch, writer, selflabels):
     for it, inputs in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-        
+
         # ============ Get inputs ... ============
         video, audio, _, selected, _ = inputs
         video, audio = video.cuda(), audio.cuda()
@@ -261,18 +274,18 @@ def train(train_loader, model, optimizer, epoch, writer, selflabels):
             with torch.no_grad():
                 _ = sk_schedule.pop()
                 selflabels = cluster(
-                    args, selflabels, train_loader.dataset, model, 
+                    args, selflabels, train_loader.dataset, model, sk_counter,
                     logger, writer, group,
-                    (batches_thusfar + it) * dataset_bs * world_size,
-                    sk_counter
+                    (batches_thusfar + it) * dataset_bs * world_size
+
                 )
 
         # ============ forward passes ... ============
         feat_v, feat_a = model(video, audio)
-        
+
         # ============ SeLaVi loss ... ============
         if args.headcount == 1:
-            labels = selflabels[selected, 0]  
+            labels = selflabels[selected, 0]
         else:
             labels = selflabels[selected, :]
         loss_vid = get_loss(feat_v, labels, headcount=args.headcount)
@@ -287,7 +300,7 @@ def train(train_loader, model, optimizer, epoch, writer, selflabels):
         else:
             loss.backward()
         optimizer.step()
-        
+
         # ============ misc ... ============
         losses.update(loss.item(), inputs[0].size(0))
         batch_time.update(time.time() - end)
@@ -319,14 +332,14 @@ def train(train_loader, model, optimizer, epoch, writer, selflabels):
                     f'batch_time/iter', batch_time.avg, iteration)
                 writer.add_scalar(
                     f'data_time/iter', data_time.avg, iteration)
-            
+
         # ============ signal handling ... ============
         if os.environ['SIGNAL_RECEIVED'] == 'True':
             if args.rank == 0:
                 logger.info("Beginning reqeue")
                 trigger_job_requeue(
                     os.path.join(args.dump_path, "checkpoint.pth.tar"))
-    
+
     dist.barrier()
     torch.cuda.empty_cache()
     return (epoch, losses.avg), selflabels

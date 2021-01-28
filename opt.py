@@ -15,8 +15,8 @@ def parse_arguments():
         elif v in ('no', 'false', 'f', '0'):
             return False
         raise ValueError('Boolean argument needs to be true or false. '
-            'Instead, it is %s.' % v)
-    
+                         'Instead, it is %s.' % v)
+
     parser = argparse.ArgumentParser(description="Implementation of SwAV")
     parser.register('type', 'bool', str2bool)
 
@@ -44,7 +44,7 @@ def parse_arguments():
                         help="train crop size")
     parser.add_argument("--test_crop_size", type=int, default=112,
                         help="test crop size")
-    parser.add_argument('--colorjitter', type='bool', default='True',
+    parser.add_argument('--colorjitter', type='bool', default='False',
                         help='use color jitter')
     parser.add_argument('--use_grayscale', type='bool', default='False',
                         help='use grayscale augmentation')
@@ -85,19 +85,27 @@ def parse_arguments():
     #########################
     parser.add_argument('--schedulepower', default=1.5, type=float,
                         help='SK schedule power compared to linear (default: 1.5)')
-    parser.add_argument('--nopts', default=160, type=int, 
+    parser.add_argument('--nopts', default=100, type=int,
                         help='number of pseudo-opts (default: 100)')
-    parser.add_argument('--lamb', default=20, type=int, 
+    parser.add_argument('--lamb', default=20, type=int,
                         help='for pseudoopt: lambda (default:25) ')
+    parser.add_argument('--dist', default=None, type=int,
+                        help='use for distribution')
+    parser.add_argument('--diff_dist_every', default='False', type='bool',
+                        help='use a different Gaussian at every SK-iter?')
+    parser.add_argument('--diff_dist_per_head', default='True', type='bool',
+                        help='use a different Gaussian for every head?')
 
     #########################
     #### Selavi parameters ###
     #########################
-    parser.add_argument('--ind_groups', default=1, type=int, 
+    parser.add_argument('--ind_groups', default=1, type=int,
                         help='number of independent groups (default: 100)')
-    parser.add_argument('--match', default='True', type='bool', 
+    parser.add_argument('--gauss_sd', default=0.1, type=float,
+                        help='sd')
+    parser.add_argument('--match', default='True', type='bool',
                         help='match distributions at beginning of training')
-    parser.add_argument('--distribution', default='default', type=str, 
+    parser.add_argument('--distribution', default='default', type=str,
                         help='distribution of SK-clustering', choices=['gauss', 'default', 'zipf'])
 
     #########################
@@ -118,9 +126,9 @@ def parse_arguments():
     #########################
     #### model parameters ###
     #########################
-    parser.add_argument("--vid_base_arch", default="r2plus1d_18", type=str, 
+    parser.add_argument("--vid_base_arch", default="r2plus1d_18", type=str,
                         help="video architecture", choices=['r2plus1d_18'])
-    parser.add_argument("--aud_base_arch", default="resnet9", type=str, 
+    parser.add_argument("--aud_base_arch", default="resnet9", type=str,
                         help="audio architecture", choices=['resnet9', 'resnet18'])
     parser.add_argument('--use_mlp', type='bool', default='True',
                         help='use MLP head')
@@ -134,7 +142,7 @@ def parse_arguments():
     #########################
     parser.add_argument("--workers", default=10, type=int,
                         help="number of data loading workers")
-    parser.add_argument("--checkpoint_freq", type=int, default=25,
+    parser.add_argument("--checkpoint_freq", type=int, default=5,
                         help="Save the model periodically")
     parser.add_argument("--use_fp16", type='bool', default='False',
                         help="whether to train with mixed precision or not")
