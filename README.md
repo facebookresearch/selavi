@@ -151,9 +151,7 @@ To evaluate SeLaVi pretraining on video action retrieval:
 python3 plot_distributions.py
 ```
 
-Uniform           |  Gaussian
-:-------------------------:|:-------------------------:
-![](cluster_vis/uniform_hist_0.png)  |  ![](cluster_vis/gaussian_hist_0.png)
+![Gaussian marginals](cluster_vis/gaussian_hist_0.png)
 
 # Citation
 If you find this repository useful in your research, please cite:
