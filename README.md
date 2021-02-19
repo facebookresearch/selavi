@@ -22,10 +22,10 @@ We provide serveral baseline SeLaVi pre-trained models with R(2+1)-D-18 video an
 
 | Method | Dataset        | Clusters | Setting   | Heads | NMI   | Accuracy | url                                                                          |
 |--------|----------------|----------|-----------|-------|-------|----------|------------------------------------------------------------------------------|
-| SeLaVi | AVE            | 28       | MA, G, MH | 10    | 66.1% | 58.0%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_ave_150.pth)            |
-| SeLaVi | Kinetics-Sound | 32       | MA, G, MH | 10    | 49.6% | 44.1%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics_sound_150.pth) |
-| SeLaVi | Kinetics       | 400      | MA, G, MH | 10    | 25.3% | 7.1%     | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics_45.pth)        |
-| SeLaVi | VGG-Sound      | 309      | MA, G, MH | 10    | 54.6% | 30.9%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_vgg_sound_150.pth)      |
+| SeLaVi | AVE            | 28       | MA, G, MH | 10    | 66.2% | 57.9%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_ave.pth)            |
+| SeLaVi | Kinetics-Sound | 32       | MA, G, MH | 10    | 47.5% | 41.2%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics_sound.pth) |
+| SeLaVi | Kinetics       | 400      | MA, G, MH | 10    | 27.1% | 7.8%     | [model](https://dl.fbaipublicfiles.com/selavi/selavi_kinetics.pth)        |
+| SeLaVi | VGG-Sound      | 309      | MA, G, MH | 10    | 55.9% | 31.0%    | [model](https://dl.fbaipublicfiles.com/selavi/selavi_vgg_sound.pth)      |
 
 MA = Modality Alignment, G = Gaussian Marginals, DH = Decorrelated Heads (see paper for details)
 
