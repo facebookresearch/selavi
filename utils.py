@@ -385,3 +385,34 @@ def get_loss(activations, targets, headcount=1):
             )
         )
     return loss
+
+def warmup_batchnorm(args, model, dataloader, batches=20, group=None):
+    """
+    Run some batches through all parts of the model to warmup the running
+    stats for batchnorm layers.
+    """
+    print("Warming up batchnorm", flush=True)
+    start = time.time()
+    with torch.no_grad():
+        # Put model in train mode
+        model.train()
+        # Iterate over dataloader batches times
+        for i, batch in enumerate(dataloader):
+            video, audio, _, _, idx = batch
+
+            # Move to GPU
+            video = video.cuda(non_blocking=True)
+            audio = audio.cuda(non_blocking=True)
+            if i == batches:
+                break
+            # Forward pass: get features, compute loss and accuracy
+            _ = model(video, audio)
+
+        # Ensure processes reach to end of optim clusters
+        if args.distributed and args.world_size > 1:
+            if group is not None:
+                dist.barrier(group=group)
+            else:
+                dist.barrier()
+    print(f"Finshed warming up batchnorm!)"
+          f"took {(time.time()-start)/60:.1f}min", flush=True)
